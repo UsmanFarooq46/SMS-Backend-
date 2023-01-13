@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const morgan = require("morgan");
+const errorHandler=require("./src/middleware/custome_error")
 
 //middlewares
 app.use(express.json());
@@ -29,5 +30,8 @@ app.get("/", (req, res) => {
 
 const authRouter=require('./src/api/routers/auth/auth-router')
 app.use("/auth",authRouter)
+
+// handle error 
+app.use(errorHandler)
 
 module.exports = app;

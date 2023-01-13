@@ -1,65 +1,107 @@
 const userModel = require("./../../models/user.model");
+const errorResp = require("./../../../utils/error_response");
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
-const { loginValidation } = require("../../validations/validations");
-const jwt=require('jsonwebtoken')
+const validations = require("../../validations/validations");
+const jwt = require("jsonwebtoken");
 
-const addNewUser = async (req, res) => {
+const addNewUser = async (req, res, next) => {
   try {
-    //   testing unique email:
-    const emailExists = await userModel.findOne({ email: req.body.email });
-    if (emailExists) {
-      return res
-        .status(500)
-        .json({ success: false, message: "email Already Exists: " });
+    //   testing unique UserName:
+    const userNameExists = await userModel.findOne({
+      userName: req.body.userName,
+    });
+    if (userNameExists) {
+      return next(new errorResp("", "User Name Already Exists", 400));
     }
     // Hash the pass
-    const salt = await bcrypt.genSalt(10);
-    const hashPassword = await bcrypt.hash(req.body.password, salt);
-    req.body.password = hashPassword;
+    if (req.body?.password) {
+      const salt = await bcrypt.genSalt(10);
+      const hashPassword = await bcrypt.hash(req.body.password, salt);
+      req.body.password = hashPassword;
+    }
     //   saving new user
     const newUser = new userModel(req.body);
     let savedUser = await newUser.save();
-    res.status(201).send(newUser);
+    res.status(201).send(savedUser);
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Adding User error: ", error_message:error?.message,Complete_error:error });
+    next(new errorResp(error, "Cannot create Data", 400));
   }
 };
 
-const getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res, next) => {
   try {
     const userdata = await userModel.find();
     console.log("user data: ", userdata);
     res.status(200).send(userdata);
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "users Not Found: ", error });
+    next(new errorResp(`User not found in database`, 404));
   }
 };
 
-const login = async (req, res) => {
-    const {error}=loginValidation(req.body);
-    console.log("what is in the error: ",error);
-    if(error)return res.status(400).json({success:false,message:"validation failed",error:error})
-    const user = await userModel.findOne({ userName: req.body.userName });
-    if (user == null || user == undefined) {
-        return res
-        .status(500)
-        .json({ success: false, message: "UserName is wrong: " });
+const getUserById = async (req, res, next) => {
+  try {
+    console.log("querry params : ", req.params.id);
+    const userData = await userModel.findById(req.params.id);
+    res.status(200).send(userData);
+  } catch (err) {
+    next(new errorResp(err));
+  }
+};
+
+const login = async (req, res, next) => {
+  const { error } = validations.loginValidation(req.body);
+  if (error) return next(new errorResp(error, error.details[0].message, 400));
+
+  const user = await userModel.findOne({ userName: req.body.userName });
+  if (user == null || user == undefined) {
+    return res
+      .status(500)
+      .json({ success: false, message: "UserName is wrong: " });
+  }
+  const validPass = await bcrypt.compare(req.body.password, user.password);
+  if (!validPass) return next(new errorResp("", "Password is wrong", 400));
+
+  // Create and assign a token
+  const token = jwt.sign(
+    { _id: user._id, role: user.role, date: new Date().toDateString() },
+    process.env.token_private,
+    { expiresIn: "14d" }
+  );
+  res.header("auth-token", token).json({ token: token, userData: user });
+};
+
+const changeForgotPassword = async (req, resp, next) => {
+  try {
+    const { error } = validations.forgotPassValidations(req.body);
+    if (error) return next(new errorResp(error, error.details[0].message, 400));
+    const user = await userModel.findOne({
+      userName: req.body.userName,
+      email: req.body.email,
+    });
+    if(user==undefined||user==null) return next(new errorResp('',`Data not found against ${req.body.userName} & ${req.body.email}`,404));
+
+    // hash new password
+    if (req.body?.newPass) {
+      const salt = await bcrypt.genSalt(10);
+      const hashPassword = await bcrypt.hash(req.body.newPass, salt);
+      req.body.newPass = hashPassword;
     }
-    const validPass=await bcrypt.compare(req.body.password,user.password)
-    if(!validPass) return res.status(400).json({success:false,message:"Password is wrong"});
-    // Create and assign a token
-    const token=jwt.sign({_id:user._id,role:user.role},process.env.token_private, {expiresIn: '2m'})
-    res.header('auth-token',token).json({token:token,userData:user});
+
+    user.password=req.body.newPass
+    updatedData=await userModel.findByIdAndUpdate(user._id.toString(),user)
+    resp.status(200).send(updatedData)
+  } catch (err) {
+    console.log("err: ",err);
+    next(new errorResp(err, "Forgot password error",401));
+  }
 };
 
 module.exports = {
   addNewUser,
   login,
-  getAllUsers
+  getAllUsers,
+  changeForgotPassword,
+  getUserById,
 };
