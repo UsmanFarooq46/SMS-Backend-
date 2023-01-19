@@ -32,9 +32,17 @@ const addNewUser = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const userdata = await userModel.find();
-    console.log("user data: ", userdata);
-    res.status(200).send(userdata);
+    let allActiveUsers = await userModel.find();
+    res.status(200).send(allActiveUsers);
+  } catch (error) {
+    next(new errorResp(error, `Users not found in database`, 404));
+  }
+};
+
+const getAllActiveUsers = async (req, res, next) => {
+  try {
+    let allActiveUsers = await userModel.find({ isDeleted: false });
+    res.status(200).send(allActiveUsers);
   } catch (error) {
     next(new errorResp(`User not found in database`, 404));
   }
@@ -42,7 +50,6 @@ const getAllUsers = async (req, res, next) => {
 
 const getUserById = async (req, res, next) => {
   try {
-    console.log("querry params : ", req.params.id);
     const userData = await userModel.findById(req.params.id);
     res.status(200).send(userData);
   } catch (err) {
@@ -60,6 +67,14 @@ const login = async (req, res, next) => {
       .status(500)
       .json({ success: false, message: "UserName is wrong: " });
   }
+  if (user.isDeleted.toString() === "false")
+    return next(
+      new errorResp(
+        "",
+        "Admin has disabled You. Please contact admin to activate it",
+        400
+      )
+    );
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return next(new errorResp("", "Password is wrong", 400));
 
@@ -80,7 +95,14 @@ const changeForgotPassword = async (req, resp, next) => {
       userName: req.body.userName,
       email: req.body.email,
     });
-    if(user==undefined||user==null) return next(new errorResp('',`Data not found against ${req.body.userName} & ${req.body.email}`,404));
+    if (user == undefined || user == null)
+      return next(
+        new errorResp(
+          "",
+          `Data not found against ${req.body.userName} & ${req.body.email}`,
+          404
+        )
+      );
 
     // hash new password
     if (req.body?.newPass) {
@@ -89,12 +111,24 @@ const changeForgotPassword = async (req, resp, next) => {
       req.body.newPass = hashPassword;
     }
 
-    user.password=req.body.newPass
-    updatedData=await userModel.findByIdAndUpdate(user._id.toString(),user)
-    resp.status(200).send(updatedData)
+    user.password = req.body.newPass;
+    updatedData = await userModel.findByIdAndUpdate(user._id.toString(), user);
+    resp.status(200).send(updatedData);
   } catch (err) {
-    console.log("err: ",err);
-    next(new errorResp(err, "Forgot password error",401));
+    next(new errorResp(err, "Forgot password error", 401));
+  }
+};
+
+const disAbleUser = async (req, res, next) => {
+  try {
+    const updateUser = await userModel.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
+    res.status(200).send(updateUser);
+  } catch (error) {
+    next(new errorResp(error, "Error in hiding user ", 401));
   }
 };
 
@@ -104,4 +138,6 @@ module.exports = {
   getAllUsers,
   changeForgotPassword,
   getUserById,
+  disAbleUser,
+  getAllActiveUsers
 };

@@ -29,8 +29,10 @@ app.get("/", (req, res) => {
 });
 
 const authRouter=require('./src/api/routers/auth/auth-router')
-app.use("/auth",authRouter)
+app.use("/auth",authRouter);
 
+const adminDefinitions=require("./src/api/routers/admin/definitions.router")
+app.use("/admin_definitions",adminDefinitions);
 // handle error 
 app.use(errorHandler)
 

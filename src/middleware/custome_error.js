@@ -2,7 +2,6 @@ const errorHandler = (err, req, resp, next) => {
   let message = err.custome_message || "Server Error: ";
   let statusCode = err.statusCode || 500;
   // Mongoose errors:
-  console.log("err?.completeError?.name: ", err?.completeError?.name);
   if (err?.completeError?.name === "CastError") {
     message = `Data not found against provided id ${err?.completeError?.value}`;
     statusCode = 404;
