@@ -5,27 +5,23 @@ const validations = require("../../validations/validations");
 const jwt = require("jsonwebtoken");
 
 const addNewUser = async (req, res, next) => {
-  // try {
-    const userNameExists = await userModel.findOne({
-      userName: req.body.userName,
-    });
-    if (userNameExists) {
-      return next(new errorResp("", "User Name Already Exists", 400));
-    }
-    // Hash the pass
-    if (req.body?.password) {
-      const salt = await bcrypt.genSalt(10);
-      const hashPassword = await bcrypt.hash(req.body.password, salt);
-      req.body.password = hashPassword;
-    }
-    //   saving new user
-    const newUser = new userModel(req.body);
-    let savedUser = await newUser.save();
-    res.status(201).send(savedUser);
-  // } catch (error) {
-  //   console.log("what error i ma getting :",error);
-  //   next(new errorResp(error, "Cannot create Data", 400));
-  // }
+  const emailExists = await userModel.findOne({
+    email: req.body.email,
+  });
+  if (emailExists) {
+    return next(new errorResp("", "Email Already Exists", 400));
+  }
+  req.body.role="user"
+  // Hash the pass
+  if (req.body?.password) {
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(req.body.password, salt);
+    req.body.password = hashPassword;
+  }
+  //   saving new user
+  const newUser = new userModel(req.body);
+  let savedUser = await newUser.save();
+  res.status(201).send(savedUser);
 };
 
 const getAllUsers = async (req, res, next) => {
