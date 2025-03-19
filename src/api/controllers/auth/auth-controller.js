@@ -11,7 +11,7 @@ const addNewUser = async (req, res, next) => {
   if (emailExists) {
     return next(new errorResp("", "Email Already Exists", 400));
   }
-  req.body.role="user"
+  req.body.role = "user"
   // Hash the pass
   if (req.body?.password) {
     const salt = await bcrypt.genSalt(10);
@@ -55,11 +55,11 @@ const login = async (req, res, next) => {
   const { error } = validations.loginValidation(req.body);
   if (error) return next(new errorResp(error, error.details[0].message, 400));
 
-  const user = await userModel.findOne({ userName: req.body.userName });
+  const user = await userModel.findOne({ email: req.body.email });
   if (user == null || user == undefined) {
-    return res
-      .status(500)
-      .json({ success: false, message: "UserName is wrong: " });
+    return next(
+      new errorResp("", `User not found under the email ${req.body.email}`, 404)
+    );
   }
   if (user.isDeleted.toString() === "false")
     return next(
@@ -72,7 +72,6 @@ const login = async (req, res, next) => {
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return next(new errorResp("", "Password is wrong", 400));
 
-  // Create and assign a token
   const token = jwt.sign(
     { _id: user._id, role: user.role, date: new Date().toDateString() },
     process.env.token_private,
