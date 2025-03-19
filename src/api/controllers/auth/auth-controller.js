@@ -1,14 +1,11 @@
 const userModel = require("./../../models/user.model");
 const errorResp = require("./../../../utils/error_response");
-const express = require("express");
-const router = express.Router();
 const bcrypt = require("bcryptjs");
 const validations = require("../../validations/validations");
 const jwt = require("jsonwebtoken");
 
 const addNewUser = async (req, res, next) => {
-  try {
-    //   testing unique UserName:
+  // try {
     const userNameExists = await userModel.findOne({
       userName: req.body.userName,
     });
@@ -25,9 +22,10 @@ const addNewUser = async (req, res, next) => {
     const newUser = new userModel(req.body);
     let savedUser = await newUser.save();
     res.status(201).send(savedUser);
-  } catch (error) {
-    next(new errorResp(error, "Cannot create Data", 400));
-  }
+  // } catch (error) {
+  //   console.log("what error i ma getting :",error);
+  //   next(new errorResp(error, "Cannot create Data", 400));
+  // }
 };
 
 const getAllUsers = async (req, res, next) => {

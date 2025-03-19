@@ -8,8 +8,8 @@ function connectMongoos() {
   mongoose
     .connect(
       // "mongodb+srv://UsmanFarooq:03074324285@cluster0.9coy9.mongodb.net/HosspitalManagement?retryWrites=true&w=majority"
-      // "mongodb://127.0.0.1:27017/TKSS",
-      process.env.DB_connect,
+      "mongodb://127.0.0.1:27017/crypto_wallet",
+      // process.env.DB_connect,
       { useNewUrlParser: true }
       // "mongodb://127.0.0.1:27017/nakashtesting"
     )
